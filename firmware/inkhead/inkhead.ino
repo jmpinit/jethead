@@ -37,7 +37,7 @@ void stopSpraying() {
 void loop() {
     static int stage = 0;
     static uint8_t command = 0;
-    static uint8_t parameter = 0;
+    static uint16_t parameter = 0;
 
     // for safety
     if (spraying && (millis() - sprayStartTime) > TIMEOUT) {
@@ -50,7 +50,7 @@ void loop() {
         // tick the command parsing state machine
 
         if (c == '\r') {
-            if (stage != 2) {
+            if (stage != 3) {
                 // we only want to get here after
                 // getting a parameter value and command
                 #ifdef DEBUG
@@ -61,13 +61,27 @@ void loop() {
                 switch (command) {
                     case 'S': // spray
                     case 's':
-                        spray(parameter);
-                        Serial.println("ok");
+                        if (parameter & 0xfff) {
+                            #ifdef DEBUG
+                            Serial.print("parameter has unsprayable bits set");
+                            #endif
+                            Serial.println('!');
+                        } else {
+                            spray(parameter);
+                            Serial.println("ok");
+                        }
                         break;
                     case 'R': // rotate
                     case 'r':
-                        rotationServo.write(parameter << 2);
-                        Serial.println("ok");
+                        if (parameter >= 1024) {
+                            #ifdef DEBUG
+                            Serial.print("parameter out of bounds");
+                            #endif
+                            Serial.println('!');
+                        } else {
+                            rotationServo.write(parameter);
+                            Serial.println("ok");
+                        }
                         break;
                     default:
                         // unrecognized command
@@ -84,8 +98,11 @@ void loop() {
                 parameter = c;
                 stage = 1;
             } else if (stage == 1) {
-                command = c;
+                parameter |= c << 8;
                 stage = 2;
+            } else if (stage == 2) {
+                command = c;
+                stage = 3;
             } else {
                 // we expected '\r' instead of ending up here
                 #ifdef DEBUG
