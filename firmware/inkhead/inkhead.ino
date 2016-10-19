@@ -8,8 +8,12 @@
 #define TIMEOUT 5000
 #define PIN_MOTOR 11
 
+#define RATE 256 // higher number is less ink
+
 long sprayStartTime = 0;
 bool spraying = false;
+int lastRotation = 0;
+uint16_t bitmap = 0;
 
 Servo rotationServo;
 
@@ -20,11 +24,13 @@ void setup() {
     Serial.begin(115200);
     pinMode(PIN_MOTOR, OUTPUT);
     rotationServo.attach(PIN_MOTOR);
-    Serial.println("Effector Inkjet 0.1.0");
+    Serial.println("Effector Inkjet 1.0.0");
+    lastRotation = rotationServo.read();
 }
 
-void spray(uint16_t v) {
-    MyInkShield.spray_ink(v);
+void spray(uint16_t bmp) {
+    bitmap = bmp;
+    MyInkShield.spray_ink(bitmap);
     spraying = true;
     sprayStartTime = millis();
 }
@@ -35,17 +41,27 @@ void stopSpraying() {
 }
 
 void loop() {
+    static long time = 0;
     static int stage = 0;
     static uint8_t command = 0;
     static uint16_t parameter = 0;
+
+    time++;
 
     // for safety
     if (spraying && (millis() - sprayStartTime) > TIMEOUT) {
         stopSpraying();
     }
 
+    // splat ink!
+    if (spraying) {
+        if (time % RATE == 0) {
+            MyInkShield.spray_ink(bitmap);
+        }
+    }
+
     while (Serial.available()) {
-        char c = Serial.read();
+        uint8_t c = Serial.read();
 
         // tick the command parsing state machine
 
@@ -61,7 +77,7 @@ void loop() {
                 switch (command) {
                     case 'S': // spray
                     case 's':
-                        if (parameter & 0xfff) {
+                        if (parameter & 0xf000) {
                             #ifdef DEBUG
                             Serial.print("parameter has unsprayable bits set");
                             #endif
@@ -73,13 +89,19 @@ void loop() {
                         break;
                     case 'R': // rotate
                     case 'r':
-                        if (parameter >= 1024) {
+                        if (parameter > 180) {
                             #ifdef DEBUG
-                            Serial.print("parameter out of bounds");
+                            Serial.print("parameter out of bounds: ");
+                            Serial.print(parameter);
                             #endif
                             Serial.println('!');
                         } else {
                             rotationServo.write(parameter);
+
+                            // wait until we actually get there
+                            delay(abs(lastRotation - (int)parameter) * 10);
+
+                            lastRotation = parameter;
                             Serial.println("ok");
                         }
                         break;
