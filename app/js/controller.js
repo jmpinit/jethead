@@ -1,6 +1,7 @@
 import os from 'os';
 import SerialPort from 'serialport';
 import { SerialWire } from './wire';
+import { distance } from './util';
 
 function getUSBPorts() {
     if (os.platform() !== 'darwin') {
@@ -109,11 +110,27 @@ function discoverRobotPorts() {
 
 class Controller {
     stop() {
+        this.stopped = true;
         this.cnc.tx('!'); // feed hold
+        this.inkjet.tx(Buffer.from([0, 0, 115]));
     }
 
     moveTo(x, y) {
-        return this.cnc.send(`X${x} Y${y}`);
+        if (this.lastMove) {
+            this.lastMove = this.lastMove.then(() => (
+                new Promise((fulfill, reject) => {
+                    this.cnc.send(`X${x} Y${y}`);
+                    this.target = { fulfill, reject, x, y };
+                })
+            ));
+        } else {
+            this.lastMove = new Promise((fulfill, reject) => {
+                this.cnc.send(`X${x} Y${y}`);
+                this.target = { fulfill, reject, x, y };
+            });
+        }
+
+        return this.lastMove;
     }
 
     rotate(angle) {
@@ -150,7 +167,11 @@ class Controller {
     }
 
     configureCNC() {
-        this.cnc.send('G90'); // absolute mode
+        this.cnc.send('G90') // absolute mode
+            .then(() => this.cnc.send('$101=100')) // x step/mm
+            .then(() => this.cnc.send('$102=100')) // y step/mm
+            .then(() => this.cnc.send('$120=100')) // x accel
+            .then(() => this.cnc.send('$121=100')); // y accel
     }
 
     connect() {
@@ -164,6 +185,17 @@ class Controller {
                     parser: SerialPort.parsers.readline('\n'),
                     autoOpen: false,
                 }));
+
+                // listen for finished commands
+                // TODO generate a patch file for the grbl mods needed
+                const rStatus = /~/g;
+                this.cnc.isStatus = data => rStatus.test(data);
+                this.cnc.on('status', () => {
+                    if (this.target) {
+                        console.log(`reached (${this.target.x},${this.target.y})`);
+                        this.target.fulfill();
+                    }
+                });
 
                 this.inkjet = new SerialWire(new SerialPort(ports.inkjet, {
                     baudRate: 115200,

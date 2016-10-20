@@ -28,6 +28,12 @@ class Wire extends EventEmitter {
             return;
         }
 
+        // TODO make status handling it's own mechanism
+        if (this.isStatus && this.isStatus(data)) {
+            this.emit('status', data);
+            return;
+        }
+
         const handler = this.rxQueue.shift();
 
         if (!handler) {

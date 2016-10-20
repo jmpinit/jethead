@@ -1,8 +1,22 @@
 import * as util from './util';
 
+function generateDensity(density) {
+    const bitmap = [];
+
+    for (let i = 0; i < 12; i++) {
+        if (Math.random() < density) {
+            bitmap.push(1);
+        } else {
+            bitmap.push(0);
+        }
+    }
+
+    return bitmap;
+}
+
 function plot(ctrl, instructions) {
-    const robotWidth = 8;
-    const robotHeight = 8;
+    const robotWidth = 40;
+    const robotHeight = 40;
 
     const bounds = util.getBoundingRect(instructions);
 
@@ -12,6 +26,7 @@ function plot(ctrl, instructions) {
     };
 
     let drawing = false;
+    let intervalID;
 
     const act = (inst) => {
         if (inst.type === 'location') {
@@ -22,16 +37,25 @@ function plot(ctrl, instructions) {
             if (!drawing) {
                 drawing = true;
 
+                const bitmap = generateDensity(inst.pressure);
+
                 return ctrl.rotate(rot)
                     .then(() => ctrl.moveTo(x, y))
-                    .then(() => ctrl.spray([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]));
+                    .then(() => ctrl.spray(bitmap))
+                    .then(() => {
+                        // the ink controller has a 5 second timeout
+                        // so send another spray message before then
+                        intervalID = setInterval(() => ctrl.spray(bitmap), 4000);
+                    });
             }
 
             // we are already spraying, so just move and rotate
             return ctrl.rotate(rot)
                 .then(() => ctrl.moveTo(x, y));
         } else if (inst.type === 'endStroke') {
+            console.log('ending stroke');
             drawing = false;
+            clearInterval(intervalID);
             return ctrl.spray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         }
 

@@ -33,21 +33,26 @@ function DropZone(holder) {
             const text = event.target.result;
 
             const lines = text.split('\n');
+
+            console.log(`processing ${lines.length} lines of script`);
+
             const withoutStartup = lines.reduce(({ markers, lines }, line) => {
-                if (line.indexOf('End of tool preset binary data.') !== -1) {
-                    if (markers > 2) {
+                if (line.indexOf('</StartupFeatures>') !== -1) {
+                    if (markers > 1) {
                         throw new Error('Hit too many markers');
                     } else {
                         return { markers: markers + 1, lines };
                     }
                 } else {
-                    if (markers === 2 && line.length !== 0) {
+                    if (markers === 1 && line.length !== 0) {
                         lines.push(line);
                     }
 
                     return { markers, lines };
                 }
             }, { markers: 0, lines: [] }).lines;
+
+            console.log(withoutStartup.length);
 
             const withoutComments = withoutStartup.filter(line => !(/\s*\/\/.*/.test(line)));
             const instructions = withoutComments.map(l => l.trim()).reduce((instructions, line) => {
