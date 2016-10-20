@@ -8,7 +8,7 @@
 #define TIMEOUT 5000
 #define PIN_MOTOR 11
 
-#define RATE 256 // higher number is less ink
+#define RATE 512 // higher number is less ink
 
 long sprayStartTime = 0;
 bool spraying = false;
