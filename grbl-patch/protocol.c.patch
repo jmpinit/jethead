@@ -1,0 +1,28 @@
+diff --git a/grbl/grbl/protocol.c b/grbl/grbl/protocol.c
+old mode 100644
+new mode 100755
+index 94434f5..19a244f
+--- a/grbl/grbl/protocol.c
++++ b/grbl/grbl/protocol.c
+@@ -90,12 +90,21 @@ void protocol_main_loop()
+   // ---------------------------------------------------------------------------------  
+   // Primary loop! Upon a system abort, this exits back to main() to reset the system. 
+   // ---------------------------------------------------------------------------------  
++
++  uint8_t was_idle = 0;
+   
+   uint8_t comment = COMMENT_NONE;
+   uint8_t char_counter = 0;
+   uint8_t c;
+   for (;;) {
+ 
++      if ((sys.state != STATE_IDLE) && was_idle) {
++          was_idle = 0;
++      } else if ((sys.state == STATE_IDLE) && (!was_idle)) {
++          printPgmString(PSTR("~\r\n"));
++          was_idle = 1;
++      }
++
+     // Process one line of incoming serial data, as the data becomes available. Performs an
+     // initial filtering by removing spaces and comments and capitalizing all letters.
+     
