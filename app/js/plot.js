@@ -37,7 +37,7 @@ function plot(ctrl, instructions) {
             if (!drawing) {
                 drawing = true;
 
-                const bitmap = generateDensity(inst.pressure);
+                const bitmap = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];//generateDensity(inst.pressure);
 
                 return ctrl.rotate(rot)
                     .then(() => ctrl.moveTo(x, y))
