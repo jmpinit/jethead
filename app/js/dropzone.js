@@ -66,7 +66,7 @@ function DropZone(holder) {
                         instructions.push(parse.loc(locPart));
                     }
 
-                    instructions.push(parse.wait(line));
+                    // instructions.push(parse.wait(line));
                 } else if (line.startsWith('</StrokeEvent>')) {
                     instructions.push({ type: 'endStroke' });
                 }

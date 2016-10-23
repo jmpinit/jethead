@@ -14,10 +14,7 @@ function generateDensity(density) {
     return bitmap;
 }
 
-function plot(ctrl, instructions) {
-    const robotWidth = 40;
-    const robotHeight = 40;
-
+function plot(robotWidth, robotHeight, ctrl, instructions) {
     const bounds = util.getBoundingRect(instructions);
 
     const scale = {
@@ -37,7 +34,7 @@ function plot(ctrl, instructions) {
             if (!drawing) {
                 drawing = true;
 
-                const bitmap = generateDensity(inst.pressure);
+                const bitmap = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];//generateDensity(inst.pressure);
 
                 return ctrl.rotate(rot)
                     .then(() => ctrl.moveTo(x, y))
