@@ -6,6 +6,7 @@ module.exports = [
         entry: './js/index.js',
         target: 'node',
         externals: [nodeExternals()],
+        devtool: 'source-map',
         output: {
             path: __dirname,
             filename: 'build/app.js',
