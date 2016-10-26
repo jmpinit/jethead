@@ -1,4 +1,6 @@
-// Wait: 0.018s    Loc: (916.83, 406.591)  Pr: 1   Ti: 1   Ro: 1.25    Fw: 1   Bt: 0   Rv: NO  Iv: NO
+import log from 'winston';
+
+// Wait: 0.018s Loc: (916.83, 406.591) Pr: 1 Ti: 1 Ro: 1.25 Fw: 1 Bt: 0 Rv: NO Iv: NO
 function wait(line) {
     const rTime = /: (\d+\.\d+)s/;
     const res = line.match(rTime);
@@ -13,7 +15,7 @@ function wait(line) {
     };
 }
 
-// Loc: (1026, 330) Pr: 1   Ti: 1   Ro: 1.25    Fw: 1   Bt: 0
+// Loc: (1026, 330) Pr: 1 Ti: 1 Ro: 1.25 Fw: 1 Bt: 0
 function loc(line) {
     // don't know what Fw and Bt are so they are not parsed
     const rPos = /\((\d+(\.\d+)?),\s+(\d+(\.\d+)?)\)/;
@@ -26,8 +28,10 @@ function loc(line) {
     const tiltMatches = line.match(rTilt);
     const rotationMatches = line.match(rRotation);
 
-    if (posMatches === null || pressureMatches === null || tiltMatches === null || rotationMatches === null) {
-        console.log(posMatches, pressureMatches, tiltMatches, rotationMatches);
+    if (posMatches === null ||
+            pressureMatches === null ||
+            tiltMatches === null ||
+            rotationMatches === null) {
         throw new Error(`Not a location line: ${line}`);
     }
 
@@ -40,10 +44,49 @@ function loc(line) {
         pressure: parseFloat(pressureMatches[1]),
         tilt: parseFloat(tiltMatches[1]),
         rotation: parseFloat(rotationMatches[1]),
-    }
+    };
 }
 
-module.exports = {
-    wait,
-    loc,
-};
+function parse(text) {
+    const lines = text.split('\n');
+
+    log.info(`processing ${lines.length} lines of script`);
+
+    const withoutStartup = lines.reduce(({ markers, lines: filteredLines }, line) => {
+        if (line.indexOf('</StartupFeatures>') !== -1) {
+            if (markers > 1) {
+                throw new Error('Hit too many markers');
+            } else {
+                return { markers: markers + 1, lines: filteredLines };
+            }
+        } else {
+            if (markers === 1 && line.length !== 0) {
+                filteredLines.push(line);
+            }
+
+            return { markers, lines: filteredLines };
+        }
+    }, { markers: 0, lines: [] }).lines;
+
+    const withoutComments = withoutStartup.filter(line => !(/\s*\/\/.*/.test(line)));
+    return withoutComments.map(l => l.trim()).reduce((instructions, line) => {
+        if (line.startsWith('Loc:')) {
+            instructions.push(loc(line));
+        } else if (line.startsWith('Wait:')) {
+            // this is nasty
+            // fix requires figuring out what the delimiting character is
+            if (line.indexOf('Loc') !== -1) {
+                const locPart = line.slice(line.indexOf('Loc'), line.length);
+                instructions.push(loc(locPart));
+            }
+
+            instructions.push(wait(line));
+        } else if (line.startsWith('</StrokeEvent>')) {
+            instructions.push({ type: 'endStroke' });
+        }
+
+        return instructions;
+    }, []);
+}
+
+export default parse;
