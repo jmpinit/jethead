@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "serialport": "^4.0.3",
+    "webpack-node-externals": "^1.5.4",
     "winston": "^2.2.0"
   }
 }
