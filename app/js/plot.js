@@ -1,19 +1,5 @@
 import * as util from './util';
 
-function generateDensity(density) {
-    const bitmap = [];
-
-    for (let i = 0; i < 12; i++) {
-        if (Math.random() < density) {
-            bitmap.push(1);
-        } else {
-            bitmap.push(0);
-        }
-    }
-
-    return bitmap;
-}
-
 function plot(ctrl, instructions) {
     const robotWidth = 40;
     const robotHeight = 40;
@@ -37,7 +23,7 @@ function plot(ctrl, instructions) {
             if (!drawing) {
                 drawing = true;
 
-                const bitmap = generateDensity(inst.pressure);
+                const bitmap = Math.floor(Math.random() * 0xfff);
 
                 return ctrl.rotate(rot)
                     .then(() => ctrl.moveTo(x, y))
@@ -56,7 +42,7 @@ function plot(ctrl, instructions) {
             console.log('ending stroke');
             drawing = false;
             clearInterval(intervalID);
-            return ctrl.spray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            return ctrl.spray(0);
         }
 
         return Promise.resolve(); // nothing to do

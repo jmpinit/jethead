@@ -34,11 +34,19 @@ function distance(x1, y1, x2, y2) {
 }
 
 function lerp(start, end, amt) {
-    return start + amt * (end - start);
+    return start + (amt * (end - start));
+}
+
+function lerpPts(start, end, amt) {
+    return {
+        x: lerp(start.x, end.x, amt),
+        y: lerp(start.y, end.y, amt),
+    };
 }
 
 export {
     getBoundingRect,
     distance,
     lerp,
+    lerpPts,
 };
