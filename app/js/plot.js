@@ -32,17 +32,26 @@ function plot(ctrl, instructions) {
                         // the ink controller has a 5 second timeout
                         // so send another spray message before then
                         intervalID = setInterval(() => ctrl.spray(bitmap), 4000);
+                    })
+                    .catch(err => {
+                        throw err;
                     });
             }
 
             // we are already spraying, so just move and rotate
             return ctrl.rotate(rot)
-                .then(() => ctrl.moveTo(x, y));
+                .then(() => ctrl.moveTo(x, y))
+                .catch(err => {
+                    throw err;
+                });
         } else if (inst.type === 'endStroke') {
             console.log('ending stroke');
             drawing = false;
             clearInterval(intervalID);
-            return ctrl.spray(0);
+            return ctrl.spray(0)
+                .catch(err => {
+                    throw err;
+                });
         }
 
         return Promise.resolve(); // nothing to do
@@ -50,7 +59,10 @@ function plot(ctrl, instructions) {
 
     const plotPromise = instructions.reduce((prevAction, instruction) => {
         if (prevAction) {
-            return prevAction.then(() => act(instruction));
+            return prevAction.then(() => act(instruction))
+                .catch(err => {
+                    throw err;
+                });
         }
 
         return act(instruction);

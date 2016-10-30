@@ -174,6 +174,8 @@ class SimController {
         }
 
         this.sprayBitmap = bitmap;
+
+        return Promise.resolve();
     }
 
     // no significance for sim
@@ -198,7 +200,10 @@ class Controller {
                     this.cnc.send(`X${x} Y${y}`);
                     this.target = { fulfill, reject, x, y };
                 })
-            ));
+            ))
+            .catch(err => {
+                throw err;
+            });
         } else {
             this.lastMove = new Promise((fulfill, reject) => {
                 this.cnc.send(`X${x} Y${y}`);
