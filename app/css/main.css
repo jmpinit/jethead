@@ -28,3 +28,9 @@ body, html {
     left: 32px;
     top: 32px;
 }
+
+#canvas-size {
+    position: absolute;
+    left: 32px;
+    top: 64px;
+}
