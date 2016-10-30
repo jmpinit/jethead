@@ -2,6 +2,10 @@ import DropZone from './dropzone';
 import { Controller, SimController } from './controller';
 import plot from './plot';
 import parse from './art-parse';
+import { hookup } from './error';
+
+// top-level exception handlers
+hookup();
 
 const canvas = document.getElementById('viewport');
 const holder = document.getElementById('holder');
@@ -81,8 +85,3 @@ stopButton.onclick = function() {
     console.log('commanding to stop');
     ctrl.stop();
 };
-
-process.on('uncaughtException', (err) => {
-    document.body.setAttribute('style', 'background-color: #f00');
-    document.body.innerHTML = `Send the following to Owen:<br><br>${err.stack}`;
-});

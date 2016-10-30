@@ -1,4 +1,5 @@
 import * as util from './util';
+import { dieWithError } from './error';
 
 function plot(ctrl, instructions) {
     const robotWidth = 40;
@@ -33,25 +34,19 @@ function plot(ctrl, instructions) {
                         // so send another spray message before then
                         intervalID = setInterval(() => ctrl.spray(bitmap), 4000);
                     })
-                    .catch(err => {
-                        throw err;
-                    });
+                    .catch(err => dieWithError(err));
             }
 
             // we are already spraying, so just move and rotate
             return ctrl.rotate(rot)
                 .then(() => ctrl.moveTo(x, y))
-                .catch(err => {
-                    throw err;
-                });
+                .catch(err => dieWithError(err));
         } else if (inst.type === 'endStroke') {
             console.log('ending stroke');
             drawing = false;
             clearInterval(intervalID);
             return ctrl.spray(0)
-                .catch(err => {
-                    throw err;
-                });
+                .catch(err => dieWithError(err));
         }
 
         return Promise.resolve(); // nothing to do
@@ -60,9 +55,7 @@ function plot(ctrl, instructions) {
     const plotPromise = instructions.reduce((prevAction, instruction) => {
         if (prevAction) {
             return prevAction.then(() => act(instruction))
-                .catch(err => {
-                    throw err;
-                });
+                .catch(err => dieWithError(err));
         }
 
         return act(instruction);

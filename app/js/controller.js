@@ -3,6 +3,7 @@ import SerialPort from 'serialport';
 
 import { lerp, distance } from './util';
 import { SerialWire } from './wire';
+import { dieWithError } from './error';
 
 function getUSBPorts() {
     if (os.platform() !== 'darwin') {
@@ -188,6 +189,11 @@ class SimController {
 
 class Controller {
     stop() {
+        if (this.cnc === undefined) {
+            console.warn('Not stopping because connection to CNC does not exist');
+            return;
+        }
+
         this.stopped = true;
         this.cnc.tx('!'); // feed hold
         this.inkjet.tx(Buffer.from([0, 0, 115]));
