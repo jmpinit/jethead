@@ -32,7 +32,8 @@ function plot(ctrl, instructions) {
                     .then(() => {
                         // the ink controller has a 5 second timeout
                         // so send another spray message before then
-                        intervalID = setInterval(() => ctrl.spray(bitmap), 4000);
+                        intervalID = setInterval(() =>
+                          ctrl.spray(bitmap).catch(err => dieWithError(err)), 4000);
                     })
                     .catch(err => dieWithError(err));
             }
@@ -45,6 +46,7 @@ function plot(ctrl, instructions) {
             console.log('ending stroke');
             drawing = false;
             clearInterval(intervalID);
+
             return ctrl.spray(0)
                 .catch(err => dieWithError(err));
         }

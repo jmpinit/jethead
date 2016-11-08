@@ -24,7 +24,7 @@
     "webpack-node-externals": "^1.5.4"
   },
   "dependencies": {
-    "serialport": "^4.0.3",
+    "ragecode": "git+https://github.com/jmptable/ragecode.git",
     "webpack-node-externals": "^1.5.4",
     "winston": "^2.2.0"
   }

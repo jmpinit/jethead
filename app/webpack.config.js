@@ -1,11 +1,11 @@
-const nodeExternals = require('webpack-node-externals');
+// const nodeExternals = require('webpack-node-externals');
 
 module.exports = [
     {
         name: 'main',
         entry: './js/index.js',
         target: 'node',
-        externals: [nodeExternals()],
+        externals: [],
         devtool: 'source-map',
         output: {
             path: __dirname,
@@ -15,7 +15,6 @@ module.exports = [
             loaders: [
                 {
                     test: /\.js$/,
-                    exclude: /(node_modules)/,
                     loader: 'babel-loader',
                     query: {
                         presets: ['es2015'],
