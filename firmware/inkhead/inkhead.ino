@@ -4,16 +4,21 @@
 #include <Servo.h>
 #include <InkShield.h>
 
-#define DEBUG
-#define TIMEOUT 5000
-#define PIN_MOTOR 11
+#define TIMEOUT     5000
+#define PIN_MOTOR   11
+#define PIN_PATTERN 2
+#define PIN_ROT     4 // analog
 
 #define RATE 512 // higher number is less ink
+#define HISTORY_LEN 64
+
+uint8_t history[HISTORY_LEN];
 
 long sprayStartTime = 0;
 bool spraying = false;
-int lastRotation = 0;
 uint16_t bitmap = 0;
+
+int lastWidth = 0;
 
 Servo rotationServo;
 
@@ -24,8 +29,7 @@ void setup() {
     Serial.begin(115200);
     pinMode(PIN_MOTOR, OUTPUT);
     rotationServo.attach(PIN_MOTOR);
-    Serial.println("Effector Inkjet 1.0.0");
-    lastRotation = rotationServo.read();
+    Serial.println("Effector Inkjet 2.0.0");
 }
 
 void spray(uint16_t bmp) {
@@ -40,18 +44,34 @@ void stopSpraying() {
     spraying = false;
 }
 
+void rememberValue(uint8_t v) {
+    // make space for new value
+    for (int i = HISTORY_LEN-1; i--; i > 0) {
+        history[i] = history[i - 1];
+    }
+
+    history[0] = v;
+}
+
+uint8_t averageHistory() {
+    unsigned int total = 0;
+
+    for (int i = 0; i < HISTORY_LEN; i++) {
+        total += history[i];
+    }
+
+    return total / HISTORY_LEN;
+}
+
 void loop() {
     static long time = 0;
-    static int stage = 0;
-    static uint8_t command = 0;
-    static uint16_t parameter = 0;
 
     time++;
 
     // for safety
-    if (spraying && (millis() - sprayStartTime) > TIMEOUT) {
+    /*if (spraying && (millis() - sprayStartTime) > TIMEOUT) {
         stopSpraying();
-    }
+    }*/
 
     // splat ink!
     if (spraying) {
@@ -60,79 +80,28 @@ void loop() {
         }
     }
 
-    while (Serial.available()) {
-        uint8_t c = Serial.read();
+    // rotation control
 
-        // tick the command parsing state machine
+    int rawRotationReading = analogRead(PIN_ROT); // shift 10 bit result into 7 bits
+    int instantRotation = (float)rawRotationReading * (180.0f / 1024.0f);
+    rememberValue(instantRotation);
+    int rotation = averageHistory();
 
-        if (c == '\r') {
-            if (stage != 3) {
-                // we only want to get here after
-                // getting a parameter value and command
-                #ifdef DEBUG
-                Serial.print("missing parameter and command or just parameter");
-                #endif
-                Serial.println('!'); // indicate error
-            } else {
-                switch (command) {
-                    case 'S': // spray
-                    case 's':
-                        if (parameter & 0xf000) {
-                            #ifdef DEBUG
-                            Serial.print("parameter has unsprayable bits set");
-                            #endif
-                            Serial.println('!');
-                        } else {
-                            spray(parameter);
-                            Serial.println("ok");
-                        }
-                        break;
-                    case 'R': // rotate
-                    case 'r':
-                        if (parameter > 180) {
-                            #ifdef DEBUG
-                            Serial.print("parameter out of bounds: ");
-                            Serial.print(parameter);
-                            #endif
-                            Serial.println('!');
-                        } else {
-                            rotationServo.write(parameter);
+    static long lastRot = 0;
+    if (lastRot != rotation) {
+        rotationServo.write(rotation);
+        lastRot = rotation;
+    }
 
-                            // wait until we actually get there
-                            delay(abs(lastRotation - (int)parameter) * 10);
+    // spray control
 
-                            lastRotation = parameter;
-                            Serial.println("ok");
-                        }
-                        break;
-                    default:
-                        // unrecognized command
-                        #ifdef DEBUG
-                        Serial.print("unrecognized command");
-                        #endif
-                        Serial.println('!'); // indicate error
-                }
-            }
-
-            stage = 0;
-        } else {
-            if (stage == 0) {
-                parameter = c;
-                stage = 1;
-            } else if (stage == 1) {
-                parameter |= c << 8;
-                stage = 2;
-            } else if (stage == 2) {
-                command = c;
-                stage = 3;
-            } else {
-                // we expected '\r' instead of ending up here
-                #ifdef DEBUG
-                Serial.print("expected a carriage return");
-                #endif
-                Serial.println('!'); // indicate error
-                stage = 0; // reset
-            }
+    if (digitalRead(PIN_PATTERN)) {
+        if (!spraying) {
+            spray(0xfff);
+        }
+    } else {
+        if (spraying) {
+            stopSpraying();
         }
     }
 }
