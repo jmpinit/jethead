@@ -75,8 +75,8 @@ function identifyPort(portPath, timeout = 10000) {
 function discoverRobotPorts() {
     return getUSBPorts()
         .then(ports => {
-            if (ports.length < 2) {
-                return Promise.reject(new Error(`Robot has 2 serial ports but found ${ports.length} connected`));
+            if (ports.length < 1) {
+                return Promise.reject(new Error(`Robot has 1 serial port but found ${ports.length} connected`));
             }
 
             console.log('going to check', ports);
@@ -87,9 +87,9 @@ function discoverRobotPorts() {
 
                     const recognized = identities.filter(info => info !== undefined);
 
-                    if (recognized.length < 2) {
+                    if (recognized.length < 1) {
                         return Promise.reject(new Error(`Missing a port. Found ${identities.map(id => id.type)}`));
-                    } else if (recognized.length > 2) {
+                    } else if (recognized.length > 1) {
                         return Promise.reject(new Error(`Found too many ports: ${identities.map(id => id.type)}`));
                     }
 
@@ -222,6 +222,7 @@ class Controller {
 
     // angle in radians
     rotate(angle) {
+        /*
         if (angle > Math.PI) {
             throw new Error('Can only rotate 0-180 degrees');
         }
@@ -231,6 +232,7 @@ class Controller {
         const unitsL = units & 0xff;
 
         return this.inkjet.send(Buffer.from([unitsL, unitsH, 114]));
+        */
     }
 
     spray(bitmap) {
@@ -238,10 +240,15 @@ class Controller {
             throw new Error('Bitmap has extra bits set (there are only 12 nozzles)');
         }
 
-        const bitmapL = bitmap & 0xff;
-        const bitmapH = bitmap >> 8;
+        // const bitmapL = bitmap & 0xff;
+        // const bitmapH = bitmap >> 8;
 
-        return this.inkjet.send(Buffer.from([bitmapL, bitmapH, 115]));
+        // return this.inkjet.send(Buffer.from([bitmapL, bitmapH, 115]));
+        if (bitmap > 0) {
+            this.cnc.send('M8');
+        } else {
+            this.cnc.send('M9');
+        }
     }
 
     configureCNC() {
@@ -256,7 +263,7 @@ class Controller {
         return discoverRobotPorts()
             .then(ports => {
                 console.log(`found cnc connected at ${ports.cnc}`);
-                console.log(`found inkjet connected at ${ports.inkjet}`);
+                // console.log(`found inkjet connected at ${ports.inkjet}`);
 
                 this.cnc = new SerialWire(new SerialPort(ports.cnc, {
                     baudRate: 115200,
@@ -275,16 +282,19 @@ class Controller {
                     }
                 });
 
+                /*
                 this.inkjet = new SerialWire(new SerialPort(ports.inkjet, {
                     baudRate: 115200,
                     parser: SerialPort.parsers.readline('\n'),
                     autoOpen: false,
                 }));
+                */
 
                 let errcnt = 0;
                 this.inkjet.on('error', err => console.warn(err, errcnt++));
 
                 // ignore
+                /*
                 const inkjetInitPromise = new Promise((fulfill, reject) => {
                     this.inkjet.open().then(() => {
                         this.inkjet.onMessage(msg => msg === 'Effector Inkjet 1.0.0', () => {
@@ -293,6 +303,7 @@ class Controller {
                         });
                     });
                 });
+                */
 
                 const cncInitPromise = new Promise((fulfill, reject) => {
                     this.cnc.open().then(() => {
@@ -304,7 +315,7 @@ class Controller {
                     });
                 });
 
-                return Promise.all([inkjetInitPromise, cncInitPromise]);
+                return Promise.all([{}, cncInitPromise]);
             });
     }
 }
